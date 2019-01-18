@@ -88,3 +88,18 @@ public class Main {
   }
 }
 ```
+<br>
+
+#### 6、输出结果
+```
+一月 19, 2019 12:09:16 上午 org.springframework.context.support.ClassPathXmlApplicationContext prepareRefresh
+信息: Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@6193b845: startup date [Sat Jan 19 00:09:16 CST 2019]; root of context hierarchy
+一月 19, 2019 12:09:16 上午 org.springframework.beans.factory.xml.XmlBeanDefinitionReader loadBeanDefinitions
+信息: Loading XML bean definitions from class path resource [applicationContext.xml]
+HelloWorld's Constructor...
+setName: Spring
+hello Spring
+```
+从这个结果我们可以看出一些东西：<br>
+在Spring项目运行的时候，先加载applicationContext.xml，这时会自动完成配置文件bean的实例化，并且调动setter方法对属性赋值，<br>
+最后才轮到我们获取对象，使用对象。<br>
