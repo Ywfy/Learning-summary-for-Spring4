@@ -418,3 +418,288 @@ public class MyBeanPostProcessor implements BeanPostProcessor {
 * 后置处理器after处理
 * Bean可以被使用了
 * 当容器关闭时，调用Bean的销毁方法(destroy-method)
+<br>
+
+## 工厂方法创建Bean
+### 1、静态工厂方法:直接调用某一个类的静态方法就可以返回Bean的实例
+##### 1)、创建静态工厂
+```
+public class StaticCarFactory {
+	
+	private static Map<String,Car> cars = new HashMap<String,Car>();
+	
+	static {
+		cars.put("AUDI", new Car("AUDI",300000));
+		cars.put("Ford", new Car("Ford",400000));
+	}
+	
+	//静态工厂方法
+	public static Car getCar(String name) {
+		return cars.get(name);
+	}
+}
+```
+##### 2)、在配置文件中配置静态工厂
+```
+	<!-- 通过静态工厂方法来配置bean，注意不是配置静态工厂方法实例，而是配置bean实例 
+		  class对应factory的全类名 
+		  factory-method对应工厂方法名
+		      工厂方法的参数放在  <constructor-arg>子标签中
+		  getBean使用工厂的ID
+	-->
+	<bean id="car1" 
+		class="com.atguigu.spring.bean.factory.StaticCarFactory"
+		factory-method="getCar">
+		<constructor-arg value="AUDI"></constructor-arg>
+	</bean>
+```
+
+### 2、实例工厂方法:先需要创建工厂实例，再调用工厂的实例方法来返回Bean的实例
+##### 1)、创建实例工厂
+```
+public class InstanceCarFactory {
+	
+	private Map<String,Car> cars = null;
+	
+	public InstanceCarFactory() {
+		cars = new HashMap<String,Car>();
+		cars.put("AUDI", new Car("AUDI",300000));
+		cars.put("Ford", new Car("Ford",400000));
+	}
+	public Car getCar(String brand) {
+		return cars.get(brand);
+	}
+}
+```
+##### 2)、在配置文件中配置实例工厂
+```
+	<!--通过实例工厂方法来配置bean 
+		factory-bean属性:指向实例工厂的bean
+		factory-method对应工厂方法名
+		工厂方法的参数放在  <constructor-arg>子标签中
+	 -->
+	<!-- 配置工厂的实例 -->
+	<bean id="carFactory" class="com.atguigu.spring.bean.factory.InstanceCarFactory">
+	</bean>
+	<!-- 通过实例工厂方法来配置bean -->
+	<bean id="car2" factory-bean="carFactory" factory-method="getCar">
+		<constructor-arg value="Ford"></constructor-arg>
+	</bean>
+```
+<br>
+
+## FactoryBean方法创建Bean
+* Spring 中有两种类型的 Bean, 一种是普通Bean, 另一种是工厂Bean, 即FactoryBean. 
+* 工厂 Bean 跟普通Bean不同, 其返回的对象不是指定类的一个实例, 其返回的是该工厂 Bean 的 getObject 方法所返回的对象 
+### FactoryBean方法流程:
+##### 1、实现FactoryBean接口
+```
+package com.atguigu.spring.bean.factorybean;
+
+import org.springframework.beans.factory.FactoryBean;
+
+//自定义的FactoryBean需要实现FactoryBean接口
+public class CarFactoryBean implements FactoryBean<Car> {
+	
+	private String brand;
+	
+	public void setBrand(String brand) {
+		this.brand = brand;
+	}
+	//返回bean的对象
+	@Override
+	public Car getObject() throws Exception {
+		// TODO Auto-generated method stub
+		return new Car("BMW", 500000);
+	}
+
+	//返回的bean的类型
+	@Override
+	public Class<?> getObjectType() {
+		// TODO Auto-generated method stub
+		return Car.class;
+	}
+
+	//返回的实例是否为单例
+	@Override
+	public boolean isSingleton() {
+		// TODO Auto-generated method stub
+		return true;
+	}
+		
+}
+
+```
+##### 2、全局配置文件配置
+```
+	<!-- 
+		通过FactoryBean来配置Bean的实例
+		class：指向FactoryBean的全类名
+		property：配置FactoryBean的属性
+		
+		但实际返回的实例却是FactoryBean的getObject()方法返回的实例
+	 -->
+	<bean id="car" class="com.atguigu.spring.bean.factorybean.CarFactoryBean">
+		<property name="brand" value="BMW"></property>
+	</bean>
+```
+<br>
+
+## 基于注解的方式配置Bean
+* 组件扫描(component scanning):  Spring 能够从 classpath 下自动扫描, 侦测和实例化具有特定注解的组件。
+* 特定组件包括：
+	* @Component:基本注解，标识了一个受Spring管理的组件
+	* @Respository:标识持久层组件
+	* @Service:标识服务层(业务层)组件
+	* @Controller:标识表现层组件
+* 对于扫描到的组件, Spring 有默认的命名策略: 使用非限定类名, 第一个字母小写. 也可以在注解中通过 value 属性值标识组件的名称
+* 当在组件类上使用了特定的注解之后, 还需要在 Spring 的配置文件中声明 <context:component-scan> ：
+```
+	<!-- 指定Spring IOC 容器扫描的包,将会扫描这个包及其子包 -->
+	<!-- 可以通过resource-pattern指定扫描资源，只扫描特定的类 --> 
+	<context:component-scan 
+		base-package="com.atguigu.spring.bean.annotation"
+		resource-pattern="repository/*.class">
+	</context:component-scan>
+	
+```
+* 包含扫描和排除扫描
+```
+<!-- <context:exclude-filter> 子节点指定排除哪些指定表达式的组件  -->
+<!-- <context:include-filter> 子节点指定包含哪些表达式的组件，该子节点需要use-default-filters=false配合使用-->
+<context:component-scan 
+	base-package="com.atguigu.spring.bean.annotation"
+	use-default-filters="true">
+		<!-- annotation:过滤目标是所有标注了指定注解的类 -->
+		<!-- 
+		<context:exclude-filter type="annotation" 
+			expression="org.springframework.stereotype.Repository"/> 
+		-->
+		<!--
+		<context:include-filter type="annotation" 
+			expression="org.springframework.stereotype.Repository"/>
+		-->
+		
+		<!-- assignable:过滤目标是所有继承（实现）了指定类（接口）的类 -->
+		<!-- 
+		<context:exclude-filter type="assignable" 
+			expression="com.atguigu.spring.bean.annotation.repository.UserRepository"/>
+		-->
+		<!-- 
+		<context:include-filter type="assignable" 
+			expression="com.atguigu.spring.bean.annotation.repository.UserRepository"/> 
+		-->
+</context:component-scan>
+```
+* 使用@Autowired自动装配属性bean
+```
+@Controller
+public class UserController {
+	
+	@Autowired
+	private UserService userService;
+	
+	public void execute() {
+		System.out.println("UserController execute...");
+		userService.add();
+	}
+}
+```
+默认情况下，当IOC容器中存在多个类型兼容的Bean时，即继承自同一类或引用了同一接口，@Autowired将无法工作<br>
+解决方法：<br>
+1、@Repository("userRepository"),给想要正确装配的类进行如左操作，括号内为要自动装配的属性的非限定名<br>
+	 				spring里的非限定名为首字母小写，其他不变。<br>
+2、使用@Qualifier("userRepositoryImpl")，直接指定<br>
+```
+@Service
+public class UserService {
+	
+	private UserRepository userRepository;
+	//此处将@Autowired写在方法上也是可以的，将自动装配传参
+	@Autowired
+	public void setUserRepository(@Qualifier("userRepositoryImpl")UserRepository userRepository) {
+		this.userRepository = userRepository;
+	}
+	
+	public void add() {
+		System.out.println("UserService add...");
+		userRepository.save();
+	}
+}
+```
+
+对于自动装配链，比如 UserControlle===>UserService===>UserRepository,若其中一环出现了无法装配的情况，比如存在多个类型兼容的Bean时，默认情况下是抛出异常。<br>
+我们通过以下操作可以改变这个情况，使得允许某环可以不强制装配
+```
+	//@Autowired(required=false)允许该属性不被设置，就是可以不强制装配，若找不到就算了
+	@Autowired(required=false)
+	private TestObject testObject;
+```
+<br>
+
+## 泛型依赖注入
+![图片无法加载](https://github.com/Ywfy/Learning-summary-for-Spring4/blob/master/Bean/%E5%9B%BE%E7%89%872.png)<br>
+泛型依赖注入：子类之间的依赖关系由其父类泛型以及父类之间的依赖关系来确定，父类的泛型必须为同一类型。<br>
+简单点说，就是两个子类之间的依赖关系不需要在子类中去声明，而是在父类中进行了声明，而依赖的纽带就是 泛型类型，必须是相同的父类泛型类型才具有依赖关系。<br>
+简单的代码示例：<br>
+BaseRepository<T>:
+```
+package com.atguigu.spring.bean.generic.di;
+
+public class BaseRepository<T> {}
+```
+	
+BaseService<T>:
+```
+public class BaseService<T> {
+	
+	//@Autowired加在属性上会被子类继承
+	@Autowired
+	protected BaseRepository<T> repository;
+	
+	public void add() {
+		System.out.println("add...");
+		System.out.println(repository);
+	}
+}
+
+```
+
+User:
+```
+public class User{}
+```
+
+UserRepository:
+```
+@Repository
+public class UserRepository extends BaseRepository<User>{}
+```
+	
+UserService:
+```
+@Service
+public class UserService extends BaseService<User>{}
+```
+
+测试代码：
+```
+public class Main {
+
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		ApplicationContext ctx = new ClassPathXmlApplicationContext("beans-generic-di.xml");
+		
+		UserService userService = (UserService)ctx.getBean("userService");
+		userService.add();
+	}
+
+}
+```
+
+结果:
+```
+add...
+com.atguigu.spring.bean.generic.di.UserRepository@3d921e20
+```
+在这个示例中，明明userService和UserRepository是没有什么关系的，但是因为他们的父类具有依赖关系，并且两个类的父类泛型都为User,所以他们也拥有了这种依赖关系<br>
