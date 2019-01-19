@@ -35,8 +35,8 @@
 
 ```
 <bean id="helloWorld" class="com.atguigu.spring.bean.HelloWorld">
-    <!-- name属性填Bean对应的属性名，value填注入值 -->
-		<property name="name" value="Spring"></property>
+    	<!-- name属性填Bean对应的属性名，value填注入值 -->
+	<property name="name" value="Spring"></property>
 </bean>
 ```
 
@@ -46,10 +46,10 @@
   
 ```
 <!-- 2、构造器注入 
-			使用<constructor-arg>标签
-				value：传给构造器的值,也可以作为子标签写在内部
-				index：对应构造器的第几个参数（从0开始）
-				type:指定参数的类型（用来区分重载构造器）
+		使用<constructor-arg>标签
+			value：传给构造器的值,也可以作为子标签写在内部
+			index：对应构造器的第几个参数（从0开始）
+			type:指定参数的类型（用来区分重载构造器）
 	-->
 	<bean id="car" class="com.atguigu.spring.bean.Car">
 		<constructor-arg value="AUDI" index="0"></constructor-arg>
@@ -62,15 +62,15 @@
 #### 1)、如果字面值包含特殊字符，可以使用 \<![CDATA[]]> 包裹起来
 ```
 <bean id="car2" class="com.atguigu.spring.bean.Car">
-		<constructor-arg value="BaoMa" type="java.lang.String"></constructor-arg>
-		<!-- 如果字面值包含特殊字符，可以使用<![CDATA[]]>包裹起来 -->
-		<!-- <constructor-arg value="<ShangHai>" type="java.lang.String"></constructor-arg> -->
-		<constructor-arg>
-			<value><![CDATA[<"shanghai">]]></value>
-		</constructor-arg>
-		<constructor-arg type="int">
-			<value>250</value>
-		</constructor-arg>
+	<constructor-arg value="BaoMa" type="java.lang.String"></constructor-arg>
+	<!-- 如果字面值包含特殊字符，可以使用<![CDATA[]]>包裹起来 -->
+	<!-- <constructor-arg value="<ShangHai>" type="java.lang.String"></constructor-arg> -->
+	<constructor-arg>
+		<value><![CDATA[<"shanghai">]]></value>
+	</constructor-arg>
+	<constructor-arg type="int">
+		<value>250</value>
+	</constructor-arg>
 </bean>
 ```
 
@@ -78,37 +78,37 @@
 通过使用ref或者内部bean
 ```
 <bean id="person" class="com.atguigu.spring.bean.Person">
-		<property name="name" value="Tom"></property>
-		<property name="age" value="24"></property>
-		<!-- 可以使用property的ref属性建立bean之间的引用关系 -->
-		<!-- <property name="car" ref="car2"></property>  -->
-		<!-- 或者ref子标签 -->
-		<!-- 
-		<property name="car">
-			<ref bean="car2"/>
-		</property> 
-		-->
-		<!-- 内部bean,不能被外部引用，只能在内部使用 -->
-		<property name="car">
-			<bean class="com.atguigu.spring.bean.Car">
-				<constructor-arg value="Ford"></constructor-arg>
-				<constructor-arg value="ChangAn"></constructor-arg>
-				<constructor-arg value="200000" type="double"></constructor-arg>
-			</bean>
-		</property>
+	<property name="name" value="Tom"></property>
+	<property name="age" value="24"></property>
+	<!-- 可以使用property的ref属性建立bean之间的引用关系 -->
+	<!-- <property name="car" ref="car2"></property>  -->
+	<!-- 或者ref子标签 -->
+	<!-- 
+	<property name="car">
+		<ref bean="car2"/>
+	</property> 
+	-->
+	<!-- 内部bean,不能被外部引用，只能在内部使用 -->
+	<property name="car">
+		<bean class="com.atguigu.spring.bean.Car">
+			<constructor-arg value="Ford"></constructor-arg>
+			<constructor-arg value="ChangAn"></constructor-arg>
+			<constructor-arg value="200000" type="double"></constructor-arg>
+		</bean>
+	</property>
 </bean>
   ```
   
   #### 3)、NULL值和级联属性
   ```
   <bean id="person2" class="com.atguigu.spring.bean.Person">
-		<constructor-arg value="Jerry"></constructor-arg>
-		<constructor-arg value="25"></constructor-arg>
-		<!-- 测试赋值NULL -->
-		<!-- <constructor-arg><null/></constructor-arg> -->
-		<constructor-arg ref="car"></constructor-arg>
-		<!-- 级联属性赋值,注意：属性对象必须先被初始化后，级联属性才可以赋值，否则报错 -->
-		<property name="car.maxSpeed" value="300"></property>
+	<constructor-arg value="Jerry"></constructor-arg>
+	<constructor-arg value="25"></constructor-arg>
+	<!-- 测试赋值NULL -->
+	<!-- <constructor-arg><null/></constructor-arg> -->
+	<constructor-arg ref="car"></constructor-arg>
+	<!-- 级联属性赋值,注意：属性对象必须先被初始化后，级联属性才可以赋值，否则报错 -->
+	<property name="car.maxSpeed" value="300"></property>
   </bean>
   ```
   
@@ -192,4 +192,28 @@
 	<bean id="person5" class="com.atguigu.spring.bean.collections.Person"
 		p:age="30" p:name="Queen" p:cars-ref="cars"></bean>
 ```
-  
+<br>
+
+## XML 配置里的 Bean 自动装配
+通过<bean>的autowire属性指定自动装配的模式:<br>
+	* byType(根据类型自动装配):目标类型必须是单例，即在IOC容器中目标类型只能有一个Bean而不能有多个，否则报错<br>
+	* byName(根据名称自动装配):必须将目标 Bean 的名称和属性名设置的完全相同<br>
+	* constructor(通过构造器自动装配):不推荐使用<br>
+```
+<bean id="address" class="com.atguigu.spring.bean.autowire.Address"
+	p:city="BeiJing" p:street="HuiLongGuan">
+</bean>
+<!-- 
+<bean id="address2" class="com.atguigu.spring.bean.autowire.Address"
+	p:city="DaLian" p:street="ZhongShan" >
+</bean> 
+-->
+
+<bean id="car" class="com.atguigu.spring.bean.autowire.Car"
+	p:brand="AUDI" p:price="300000">
+</bean>
+		
+<bean id="person" class="com.atguigu.spring.bean.autowire.Person"
+	p:name="Tom" autowire="byType">
+</bean>
+```
