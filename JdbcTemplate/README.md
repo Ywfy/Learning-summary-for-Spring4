@@ -142,20 +142,6 @@ applicationContext.xml:
 		<constructor-arg ref="dataSource"></constructor-arg>
 	</bean>
 	
-	<!-- 
-		Spring声明式事务配置：
-		1、配置事务管理器
-		2、启动事务注解（注意引入tx命名空间）
-		3、在需要的方法上加@Transactional注解
-	 -->
-	<!-- 配置事务管理器 -->
-	<bean id="transactionManager" 
-		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
-		<property name="dataSource" ref="dataSource"></property>
-	</bean>
-	
-	<!-- 启动事务注解 -->
-	<tx:annotation-driven transaction-manager="transactionManager"/>
 </beans>
 ```
 <br>
