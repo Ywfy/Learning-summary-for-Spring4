@@ -217,3 +217,204 @@
 	p:name="Tom" autowire="byType">
 </bean>
 ```
+在实际项目开发中不建议使用自动装配，明确清晰的配置文档要更加便于维护<br>
+<br>
+
+## bean的继承与依赖
+### 1、继承Bean配置:
+基本上就是对象继承那一套：<br>
+* 子Bean继承父Bean的配置，可以进行覆盖
+* 若想父Bean只是作为模板而不会被实例化，可以设置<bean>的abstract属性为true
+* 父Bean的属性并不是都会被继承，如autowire,abstract等
+* 父Bean可以不设置class属性，但此时abstract必须设为true
+```
+<!-- 抽象bean：bean的abstract属性为true的bean，这样的bean不能被IOC实例化，只能被用来继承配置、
+	若某一个bean的class属性没有指定，则该bean必须是一个抽象bean-->
+	<bean id="address" p:city="BeiJing" p:street="WuDaoKou" abstract="true">
+	</bean>
+	
+	<!-- bean配置的继承：使用bean的parent属性指定继承哪个bean的配置 -->
+	<bean id="address2" class="com.atguigu.spring.bean.autowire.Address"
+	 parent="address">
+	</bean>
+	
+	<bean id="address3" class="com.atguigu.spring.bean.autowire.Address"
+	parent="address2" p:street="DaZhongSi">
+	</bean>
+	
+	<bean id="car" class="com.atguigu.spring.bean.autowire.Car"
+		p:brand="AUDI" p:price="300000"></bean>
+	
+```
+
+### 2、依赖Bean配置：
+```
+<!-- 要求在配置 person时，必须有一个关联的car，换句话说person这个bean依赖于Car这个bean
+		 depends-on:前置依赖，可以通过空格或者逗号分隔多个依赖
+		 	前置依赖的Bean会在本Bean实例化之前创建好 -->
+	<bean id="person" class="com.atguigu.spring.bean.autowire.Person"
+	p:name="Tom" p:address-ref="address2" depends-on="car">
+	</bean>
+```
+<br>
+
+## bean的作用域
+```
+	<!-- 
+	使用bean的scope属性来配置bean的作用域
+		singleton：默认，容器初始时创建bean实例，在整个容器的生命周期内只创建这一个bean，单例
+		prototype:原型的，容器初始化时不创建bean的实例，而在每次请求时都创建一个新的Bean实例，并返回。
+	 -->
+	<bean id="car" class="com.atguigu.spring.bean.autowire.Car"
+	scope="prototype">
+		<property name="brand" value="AUDI"></property>
+		<property name="price" value="300000"></property>
+	</bean>
+```
+<br>
+
+## 外部属性文件
+注:要引入context命名空间
+```
+	<!-- 导入属性文件 -->
+	<context:property-placeholder location="classpath:db.properties"/>
+	<bean id="DataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<!-- 使用外部属性文件的属性 -->
+		<property name="user" value="${user}"></property>
+		<property name="password" value="${password}"></property>
+		<property name="driverClass" value="${driverclass}"></property>
+		<property name="jdbcUrl" value="${jdbcurl}"></property>
+	</bean>
+```
+db.properties:<br>
+```
+user=root
+password=aA4405821985%
+driverclass=com.mysql.jdbc.Driver
+jdbcurl=jdbc:mysql:///test
+```
+<br>
+
+## SpEL
+* 支持运行时查询和操作对象图的强大的表达式语言。
+* 使用#{}作为定界符
+```
+	<bean id="address" class="com.atguigu.spring.bean.spel.Address">
+		<!-- 使用spel为属性赋一个字面值 -->
+		<property name="city" value="#{'BeiJing'}"></property>
+		<property name="street" value="WuDaoKou"></property>
+	</bean>
+	
+	<bean id="car" class="com.atguigu.spring.bean.spel.Car">
+		<property name="brand" value="AUDI"></property>
+		<property name="price" value="500000"></property>
+		<!-- 使用SpEL引用类的静态属性 -->
+		<property name="tyrePerimeter" value="#{T(java.lang.Math).PI*80}"></property>
+	</bean>
+	
+	<bean id="person" class="com.atguigu.spring.bean.spel.Person">
+		<property name="name" value="Tpm"></property>
+		<!-- <property name="car" ref="car"></property> -->
+		<!-- 使用SpEL 来引用其他的Bean -->
+		<property name="car" value="#{car}"></property>
+		<!-- 使用SpEL 来应用其他的Bean的属性 -->
+		<property name="city" value="#{address.city}"></property>
+		<!-- 在SpEL 中使用运算符 -->
+		<property name="info" value="#{car.price>300000?'金领':'白领'}"></property>
+	</bean>
+```
+<br>
+
+## IOC容器中Bean的生命周期
+Spring IOC容器可以管理Bean的生命周期，过程为：
+* 通过构造器或工厂方法创建Bean实例
+* 为Bean的属性设置值和对其他Bean的引用
+* 调用Bean的初始化方法
+* Bean可以被使用了
+* 当容器关闭时，调用Bean的销毁方法
+Bean的初始化方法通过init-method属性指定，销毁方法通过destroy-method指定<br>
+```
+<bean id="car" class="com.atguigu.spring.bean.cycle.Car"
+	init-method="init" destroy-method="destroy">
+		<property name="brand" value="AUDI"></property>
+</bean>
+```
+以下是car的定义：<br>
+```
+public class Car {
+	
+	private String brand;
+	
+	public Car() {
+		// TODO Auto-generated constructor stub
+	}
+	
+	public void setBrand(String brand) {
+		System.out.println("SetBrand...");
+		this.brand = brand;
+	}
+	
+	public void init() {
+		System.out.println("init...");
+	}
+	
+	public void destroy() {
+		System.out.println("destroy...");
+	}
+
+	@Override
+	public String toString() {
+		return "Car [brand=" + brand + "]";
+	}
+	
+}
+```
+
+实际上，我们可以创建"Bean后置处理器"在调用初始化方法前后对 Bean 进行额外的处理<br>
+### Bean后置处理器创建流程:
+#### 1、创建后置处理器，实现BeanPostProcessor接口
+```
+public class MyBeanPostProcessor implements BeanPostProcessor {
+
+	/**
+	 *  bean:bean实例本身
+	 *  beanName：IOC容器配置的bean的名字 
+	 *  返回值：是实际上返回给用户的那个Bean，注意：可以在以上两个方法中修改返回的Bean，甚至返回一个新的Bean
+	 *  注意:后置处理器是处理所有Bean的
+	 */
+	
+	//init-method之后被调用
+	@Override
+	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		// TODO Auto-generated method stub
+		System.out.println("postProcessAfterInitialization: " + bean + ", " + beanName);
+		return bean;
+	}
+
+	//init-method之前被调用
+	@Override
+	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		// TODO Auto-generated method stub
+		System.out.println("postProcessBeforeInitialization: " + bean + ", " + beanName);
+		Car car = new Car();
+		car.setBrand("Ford");
+		return car;
+	}
+
+}
+```
+
+#### 2、在配置文件中配置
+```
+<!-- 不需要配置id，IOC容器自动识别是一个BeanPostProcessor -->
+<bean class="com.atguigu.spring.bean.cycle.MyBeanPostProcessor"></bean>
+```
+
+添加Bean后置处理器后，Bean的生命周期变为如下：
+* 通过构造器或工厂方法创建Bean实例
+* 为Bean的属性设置值和对其他Bean的引用
+* 后置处理器before处理
+* 调用Bean的初始化方法(init-method)
+* 后置处理器after处理
+* Bean可以被使用了
+* 当容器关闭时，调用Bean的销毁方法(destroy-method)
