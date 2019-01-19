@@ -224,7 +224,7 @@ public class LoggingAspect {xxx
 ```
 
 ##### 3)、在类中声明各种通知
-五种通知:(1)@Before：前置通知，在方法执行之前执行<br>
+五种通知:<br>(1)@Before：前置通知，在方法执行之前执行<br>
         (2)@After：后置通知，在方法执行之后执行 <br>
         (3)@AfterRunning：返回通知，在方法返回结果之后执行<br>
         (4)@AfterThrowing：异常通知，在方法抛出异常之后<br>
@@ -232,7 +232,7 @@ public class LoggingAspect {xxx
 i、声明一个方法<br>
 ii、在方法前加入@Before或者其他注解<br>
 ```
-  //声明该方法是一个前置通知:在目标方法开始之前执行
+        //声明该方法是一个前置通知:在目标方法开始之前执行
 	@Before("execution(public int com.atguigu.spring.aop.impl.ArithmeticCalculator.*(int, int))")
 	public void beforeMethod(JoinPoint joinPoint) {
 		String methodName = joinPoint.getSignature().getName();
@@ -240,12 +240,81 @@ ii、在方法前加入@Before或者其他注解<br>
 		System.out.println("The method " + methodName + " begins with " + args);
 	}
 	
+	
+	/**
+	 * 定义一个方法，用于声明切入点表达式，一般地，该方法中再不需要添入其他的代码
+	 * 使用@Pointcut 来声明切入点表达式
+	 * 后面的其他通知直接使用方法名来引用当前的切入点表达式
+	 * 	包名.类名.方法名	(不同类加类名，不同包加包名)
+	 */
+	@Pointcut("execution(public int com.atguigu.spring.aop.ArithmeticCalculator.*(..))")
+	public void declareJointPointExpression() {}
+	
+	
+	/**
+	 * 在方法正常结束受执行的代码
+	 * 返回通知是可以访问到方法的返回值的
+	 * @param joinPoint
+	 */
+	@AfterReturning(value = "declareJointPointExpression()"
+			,returning="result")
+	public void afterReturning(JoinPoint joinPoint, Object result) {
+		String methodName = joinPoint.getSignature().getName();
+		System.out.println("The method " + methodName + " ends with " + result);
+	}
+	
+	
 	//后置通知：在目标方法执行后(无论是否发生异常)，执行的通知。
 	//在后置通知中还不能访问目标方法执行的结果
 	@After("execution(* com.atguigu.spring.aop.impl.*.*(int, int))")
 	public void afterMethod(JoinPoint joinPoint) {
 		String methodName = joinPoint.getSignature().getName();
 		System.out.println("The method " + methodName + " ends");
+	}
+	
+	
+	/**
+	 * 在目标方法出现异常时会执行的代码，可以访问到异常对象；且可以指定在出现特定异常时再执行通知代码
+	 * afterThrowing(JoinPoint joinPoint, NullPointerException ex)
+	 * 例如将参数Exception ex 改为NullPointerException ex的话就只有在发生NullPointerException时才执行代码
+	 */
+	@AfterThrowing(value = "declareJointPointExpression()"
+			,throwing = "ex")
+	public void afterThrowing(JoinPoint joinPoint, Exception ex) {
+		String methodName = joinPoint.getSignature().getName();
+		System.out.println("The method " + methodName + " occurs exception: " + ex);
+	}
+	
+	
+	/**
+	 * 环绕通知需要携带 ProceedingJoinPoint 类型的参数，
+	 * 环绕通知类似于动态代理的全过程： ProceedingJoinPoint 类型的参数可以决定是否执行目标方法，
+	 * 且环绕通知必须有返回值，且返回值即为目标方法的返回值
+	 */
+	@Around("execution(public int com.atguigu.spring.aop.ArithmeticCalculator.*(..))")
+	public Object aroundMethod(ProceedingJoinPoint pjd) {
+		
+		Object result = null;
+		String methodName = pjd.getSignature().getName();
+		Object[] args = pjd.getArgs();
+		
+		//执行目标方法
+		try {
+			//前置通知
+			System.out.println("The method " + methodName + " begins with " + Arrays.asList(args));
+			//执行目标方法
+			result = pjd.proceed();
+			//返回通知
+			System.out.println("The method " + methodName + " ends with " + result);
+		} catch (Throwable e) {
+			//异常通知
+			System.out.println("The method " + methodName + " occurs exeception: " + e);
+			throw new RuntimeException(e);
+		}
+		//后置通知
+		System.out.println("The method " + methodName + " ends");
+		
+		return result;
 	}
  
  /*
@@ -256,6 +325,30 @@ ii、在方法前加入@Before或者其他注解<br>
    *
    */
 
+```
+实际上跟动态代理相对应有如下:
+```
+@Override
+public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+	// TODO Auto-generated method stub
+	String methodName = method.getName();
+	//日志 
+	System.out.println("[before]The method " + methodName + " begin with " + Arrays.asList(args));
+	//执行方法
+	Object result = null;
+	try {
+		//前置通知
+		result = method.invoke(target, args);
+		//返回通知，可以访问到方法的返回值
+	}catch(NullPointerException e){
+		//异常通知,可以访问到方法出现的异常
+	}
+	//后置通知，因为方法可能会出异常，所以访问不到方法的返回值
+				
+	//日志
+	System.out.println("[after]The method " + methodName + " ends with " + result);
+	return result;
+}
 ```
 
 ##### 4)、可以在通知方法中声明一个类型为JoinPoint的参数，然后就能访问链接细节，如方法名称和参数值。
@@ -271,5 +364,158 @@ public class LoggingAspect {
 		System.out.println("The method " + methodName + " begins with " + args);
 	}
 ```
+
+##### 5)、在同一个连接点上应用不止一个切面时,则存在优先级问题
+此时可以使用@Order()来标明优先级,括号内数字越小优先级越高<br>
+```
+@Order(2)
+@Aspect
+@Component
+public class LoggingAspect {...
+
+@Order(1)
+@Aspect
+@Component
+public class ValidationAspect {
+	
+	@Before("com.atguigu.spring.aop.LoggingAspect.declareJointPointExpression()")
+	public void validateArgs(JoinPoint joinPoint){
+		System.out.println("validate " + Arrays.asList(joinPoint.getArgs()));
+	}
+}
+
+```
+<br>
+
+#### 4、基于XML的配置声明切面
+注：基于注解的声明要优先于基于 XML 的声明，通过 AspectJ 注解, 切面可以与 AspectJ 兼容, 而基于 XML 的配置则是 Spring 专有的<br>
+##### 1)、创建想要成为切面的类
+LoggingAspect:
+```
+package com.atguigu.spring.aop.xml;
+
+import java.util.Arrays;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+
+
+public class LoggingAspect {
+	
+	public void beforeMethod(JoinPoint joinPoint) {
+		String methodName = joinPoint.getSignature().getName();
+		Object[] args = joinPoint.getArgs();
+		System.out.println("The method " + methodName + " begins with " + Arrays.asList(args));
+	}
+	
+	public void afterReturning(JoinPoint joinPoint, Object result) {
+		String methodName = joinPoint.getSignature().getName();
+		System.out.println("The method " + methodName + " ends with " + result);
+	}
+	
+	public void afterMethod(JoinPoint joinPoint) {
+		String methodName = joinPoint.getSignature().getName();
+		System.out.println("The method " + methodName + " ends");
+	}
+		
+	public void afterThrowing(JoinPoint joinPoint, Exception ex) {
+		String methodName = joinPoint.getSignature().getName();
+		System.out.println("The method " + methodName + " occurs exception: " + ex);
+	}
+		
+		
+	public Object aroundMethod(ProceedingJoinPoint pjd) {
+		
+		Object result = null;
+		String methodName = pjd.getSignature().getName();
+		Object[] args = pjd.getArgs();
+		
+		//执行目标方法
+		try {
+			//前置通知
+			System.out.println("The method " + methodName + " begins with " + Arrays.asList(args));
+			//执行目标方法
+			result = pjd.proceed();
+			//返回通知
+			System.out.println("The method " + methodName + " ends with " + result);
+		} catch (Throwable e) {
+			//异常通知
+			System.out.println("The method " + methodName + " occurs exeception: " + e);
+			throw new RuntimeException(e);
+		}
+		//后置通知
+		System.out.println("The method " + methodName + " ends");
+		
+		return result;
+		
+	}
+}
+```
+ValidationAspect:
+```
+ackage com.atguigu.spring.aop.xml;
+
+import java.util.Arrays;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+public class ValidationAspect {
+	
+	public void validateArgs(JoinPoint joinPoint){
+		System.out.println("validate " + Arrays.asList(joinPoint.getArgs()));
+	}
+}
+```
+
+##### 2)、全局配置
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd">
+
+	<!-- 配置bean -->
+	<bean id="arithmeticCalculator"
+		class="com.atguigu.spring.aop.xml.ArithmeticCalculatorImpl">
+	</bean>
+		
+	<!-- 配置切面的bean -->
+	<bean id="loggingAspect"
+		class="com.atguigu.spring.aop.xml.LoggingAspect">
+	</bean>
+	
+	<bean id="validationAspect"
+		class="com.atguigu.spring.aop.xml.ValidationAspect">
+	</bean>
+	
+	<!-- 配置AOP -->
+	<aop:config>
+		<!-- 配置切点表达式 -->
+		<aop:pointcut expression="execution(* com.atguigu.spring.aop.xml.ArithmeticCalculator.*(int, int))" 
+			id="pointcut" />
+		<!-- 配置切面及通知 -->
+		<aop:aspect ref="loggingAspect" order="2">
+			<aop:before method="beforeMethod" pointcut-ref="pointcut"/>
+		        <aop:after method="afterMethod" pointcut-ref="pointcut"/>
+			<aop:after-returning method="afterReturning" pointcut-ref="pointcut" returning="result"/>
+			<aop:after-throwing method="afterThrowing" pointcut-ref="pointcut" throwing="ex"/> 
+			<!-- 
+			<aop:around method="aroundMethod" pointcut-ref="pointcut"/>
+			 -->
+		</aop:aspect>
+		
+		<aop:aspect ref="validationAspect" order="1">
+			<aop:before method="validateArgs" pointcut-ref="pointcut"/>
+		</aop:aspect>
+	</aop:config>
+</beans>
+```
+
 
 
