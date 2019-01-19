@@ -37,7 +37,7 @@
 <bean id="helloWorld" class="com.atguigu.spring.bean.HelloWorld">
     <!-- name属性填Bean对应的属性名，value填注入值 -->
 		<property name="name" value="Spring"></property>
-	</bean>
+</bean>
 ```
 
 ### 2、构造器注入
@@ -96,7 +96,7 @@
 				<constructor-arg value="200000" type="double"></constructor-arg>
 			</bean>
 		</property>
-	</bean>
+</bean>
   ```
   
   #### 3)、NULL值和级联属性
@@ -109,10 +109,87 @@
 		<constructor-arg ref="car"></constructor-arg>
 		<!-- 级联属性赋值,注意：属性对象必须先被初始化后，级联属性才可以赋值，否则报错 -->
 		<property name="car.maxSpeed" value="300"></property>
-	</bean>
+  </bean>
   ```
   
   #### 4)、集合属性
-  ##### \<list>、\<set>   注：数组也使用\<list>标签
+  ##### \<list>、\<set>、\<map>   注：数组也使用\<list>标签
+  ```
+  <!-- 测试如何配置集合属性 
+		三个集合属性:<list>、<set>、<map>
+		list、set标签内部可以通过：（注：数组也使用list）
+			<value>指定简单的常量值
+			<ref>指定对其他bean的引用
+			<bean>指定内置Bean定义
+			<null/>指定空元素
+			内嵌其他集合
+	-->
+	<bean id="person3" class="com.atguigu.spring.bean.collections.Person">
+		<property name="name" value="Mike"></property>
+		<property name="age" value="27"></property>
+		<property name="cars">
+		<!-- 使用list节点为list类型的属性赋值 -->
+			<list>
+				<ref bean="car"/>
+				<ref bean="car2"/>
+				<bean class="com.atguigu.spring.bean.Car">
+					<constructor-arg value="Ford"></constructor-arg>
+					<constructor-arg value="ChangAn"></constructor-arg>
+					<constructor-arg value="200000" type="double"></constructor-arg>
+				</bean>
+			</list>
+		</property>
+	</bean>
+	
+	<!-- 配置map属性值 -->
+	<bean id="newPerson" class="com.atguigu.spring.bean.collections.NewPerson">
+		<property name="name" value="Rose"></property>
+		<property name="age" value="28"></property>
+		<property name="cars">
+			<!-- 使用map节点及map的entry子节点配置Map类型的成员变量 -->
+			<map>
+				<entry key="AA" value-ref="car"></entry>
+				<entry key="BB" value-ref="car2"></entry>
+			</map>
+		</property>
+	</bean>
+	
+	<!-- 配置Properties属性值 -->
+	<bean id="dataSource" class="com.atguigu.spring.bean.collections.DataSource">
+		<!-- 使用props和prop子节点来为properties属性赋值 -->
+		<property name="properties">
+			<props>
+				<prop key="user">root</prop>
+				<prop key="password">1234</prop>
+				<prop key="jdbcUrl">niubi</prop>
+				<prop key="driverClass">wiu2i</prop>
+			</props>
+		</property>
+	</bean>
+  ```
 
+##### 定义独立可共享的集合bean
+```
+<!-- 配置单例的集合bean，以供多个bean进行引用  需要导入util命名空间-->
+	<util:list id="cars">
+		<ref bean="car" />
+		<ref bean="car2"/>
+	</util:list>
+	
+	<bean id="person4" class="com.atguigu.spring.bean.collections.Person">
+		<property name="name" value="Jack"></property>
+		<property name="age" value="29"></property>
+		<property name="cars" ref="cars"></property>
+	</bean>
+```
+<br>
+
+## p命名空间
+```
+<!-- 通过P命名空间为 bean 的属性赋值，需要先导入P命名空间 
+			相对于传统的配置方式更加的简洁	
+	-->
+	<bean id="person5" class="com.atguigu.spring.bean.collections.Person"
+		p:age="30" p:name="Queen" p:cars-ref="cars"></bean>
+```
   
