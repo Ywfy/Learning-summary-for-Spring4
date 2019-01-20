@@ -16,7 +16,7 @@
 <br>
 一个简单的示例————图书购买系统：<br>
 
-### 基于注解的方式
+## 基于注解的方式
 
 ### 1、配置事务管理器
 ```
@@ -330,6 +330,75 @@ class SpringTransactionTest {
 ```
 <br>
 
-### 基于tx和aop名字空间的xml配置文件
+## 基于tx和aop名字空间的xml配置文件
+### 1、像上种方式一样，创建好Dao、Service、Cashier，只是不加特殊注解(@Service、@Autowired、@Transactional等)
+### 2、配置数据源、JdbcTemplate。因为没有加扫描注解，所以我们要手动将bean加入到IOC容器中
+```
+<!-- 导入资源文件 -->
+	<context:property-placeholder location="classpath:db.properties"></context:property-placeholder>
 
+	<!-- 配置C3P0数据源 -->
+	<bean id="dataSource"
+		class="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<property name="user" value="${jdbc.user}"></property>
+		<property name="password" value="${jdbc.password}"></property>
+		<property name="jdbcUrl" value="${jdbc.jdbcUrl}"></property>
+		<property name="driverClass" value="${jdbc.driverClass}"></property>
+		
+		<property name="initialPoolSize" value="${jdbc.initPoolSize}"></property>
+		<property name="maxPoolSize" value="${jdbc.maxPoolSize}"></property>
+	</bean>
+	
+	<!-- 配置Spring的JdbcTemplate -->
+	<bean id="jdbcTemplate"
+		class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="dataSource"></property>	
+	</bean>
+	
+	<!-- 配置bean -->
+	<bean id="bookShopDao"
+		class="com.atguigu.spring.tx.xml.BookShopDaoImpl">
+		<property name="jdbcTemplate" ref="jdbcTemplate"></property>
+	</bean>
+	
+	<bean id="bookShopService" 
+		class="com.atguigu.spring.tx.xml.service.impl.BookShopServiceImpl">
+		<property name="bookShopDao" ref="bookShopDao"></property>
+	</bean>
+	
+	<bean id="cashier"
+		class="com.atguigu.spring.tx.xml.service.impl.CashierImpl">
+		<property name="bookShopService" ref="bookShopService"></property>
+	</bean>
+```
+### 3、配置事务管理器
+```
+<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+</bean>
+```
+
+### 4、配置事务属性
+```
+<tx:advice id="txAdvice" transaction-manager="transactionManager">
+	<tx:attributes>
+		<!-- 根据方法名指定事务的属性 -->
+		<tx:method name="purchase" propagation="REQUIRES_NEW"/>
+		<tx:method name="get*" read-only="true"/>
+		<tx:method name="find*" read-only="true"/>
+		<tx:method name="*" />
+	</tx:attributes>
+</tx:advice>
+```
+
+### 5、配置事务切入点，以及把事务切入点和事务属性关联起来
+```
+<aop:config>
+    <aop:pointcut expression="execution(* com.atguigu.spring.tx.xml.service.*.*(..))" 
+	id="txPointCut"/>
+	<!-- 使用该标签将切入点和事务属性关联起来 -->
+	<aop:advisor advice-ref="txAdvice" pointcut-ref="txPointCut"/>
+</aop:config>
+```
+最后补充一个点：Spring的事务管理是用AOP实现的，由于 Spring AOP 是基于代理的方法, 所以只能增强公共方法. 因此, 只有公有方法才能通过 Spring AOP 进行事务管理.
 
